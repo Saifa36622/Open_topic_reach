@@ -75,7 +75,7 @@ def target_check_term(end_pos,cmd,current_timestep):
             cmd[i] = UNUSED_TARGET
             # print("cmd left",5-len(cmd))
             # Compute the reward based on how quickly the target was reached
-            reward = (1000 - current_timestep) * 0.1
+            reward = (1000 - current_timestep)
 
             return reward , cmd
     return 0 ,cmd
@@ -111,8 +111,8 @@ def check_done(current_timestep,cmd):
     
 def velo_check(currrent_qqd,currrent_qqdd):
 
-    weight_qd= 1e-9
-    weight_qdd= 1e-10
+    weight_qd= 1e-10
+    weight_qdd= 1e-11
 
     velocity_penalty = weight_qd * np.sum(np.square(currrent_qqd))
     acceleration_penalty = weight_qdd * np.sum(np.square(currrent_qqdd))
