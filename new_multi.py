@@ -45,7 +45,7 @@ ur3e = rtb.DHRobot(links, name='UR3e')
 # ur3e.l
 # q = 6 * [0.0]
 # ur3e.plot(q)
-run = 1
+
 # dir = "output"
 # os.makedirs(dir, exist_ok=True)
 # file_path = os.path.join(dir, 'ur3e_plot.png')
@@ -88,6 +88,8 @@ save_dir = "saved_models"
 os.makedirs(save_dir, exist_ok=True)
 
 wandb.init(project="Open_topic",name="test")
+
+run = 1
 
 for i in range (epoch) :
 
@@ -239,8 +241,8 @@ for i in range (epoch) :
     "number of success" : n_success
     })
 
-    torch.save(agent.actor.state_dict(), os.path.join(save_dir, f"actor_episode_{i+1}.pth"))
-    torch.save(agent.critic.state_dict(), os.path.join(save_dir, f"critic_episode_{i+1}.pth"))
+    torch.save(agent.actor.state_dict(), os.path.join(save_dir,f"run_{run}", f"actor_episode_{i+1}.pth"))
+    torch.save(agent.critic.state_dict(), os.path.join(save_dir,f"run_{run}", f"critic_episode_{i+1}.pth"))
 
 wandb.finish()
 
