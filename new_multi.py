@@ -84,6 +84,9 @@ agent = PPOAgent(
 
 currrent_q, currrent_qqd, currrent_qqdd,end_pos ,valid = feedback(ur3e, dt)
 
+save_dir = "saved_models"
+os.makedirs(save_dir, exist_ok=True)
+
 wandb.init(project="Open_topic",name="test")
 
 for i in range (epoch) :
@@ -102,6 +105,7 @@ for i in range (epoch) :
     reward = 0
     qd_action = 6 * [0.0]
     log_prob = 0
+    distance_sum = 0
 
     backend.close()
 
@@ -191,7 +195,7 @@ for i in range (epoch) :
         # print(currrent_q, currrent_qqd, currrent_qqdd)
 
 
-        reward , done ,cmd = compute_reward(ur3e,cmd,j,dt)
+        reward , done ,cmd,distance,n_success = compute_reward(ur3e,cmd,j,dt)
         # print(currrent_q, currrent_qqd, currrent_qqdd,end_pos, cmd.flatten())
         next_state = np.concatenate(([j+1],currrent_q,currrent_qqd ,currrent_qqdd,end_pos, cmd.flatten()))
 
@@ -220,7 +224,8 @@ for i in range (epoch) :
         critic_loss_sum += critic_loss
         reward_sum += reward
         log_prob_sum += log_prob
-
+        distance_sum += distance
+     
         if done :
             break
 
@@ -229,8 +234,13 @@ for i in range (epoch) :
     "reward" : reward_sum / 1000,
     "actor loss" : actor_loss_sum / 1000,
     "critic_loss" : critic_loss_sum /1000,
-    "log_prob" : log_prob_sum /1000
+    "log_prob" : log_prob_sum /1000,
+    "distance" : distance_sum/1000,
+    "number of success" : n_success
     })
+
+    torch.save(agent.actor.state_dict(), os.path.join(save_dir, f"actor_episode_{i+1}.pth"))
+    torch.save(agent.critic.state_dict(), os.path.join(save_dir, f"critic_episode_{i+1}.pth"))
 
 wandb.finish()
 

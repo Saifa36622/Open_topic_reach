@@ -65,9 +65,11 @@ def reset(ur3e,dt):
 
 
 def target_check_term(end_pos,cmd,current_timestep):
+    
     for i in range(len(cmd)):
         target = cmd[i]
         distance = np.linalg.norm(end_pos - target)
+
         if distance < DISTANCE_THRESHOLD:
             
             cmd[i] = UNUSED_TARGET
@@ -78,16 +80,20 @@ def target_check_term(end_pos,cmd,current_timestep):
             return reward , cmd
     return 0 ,cmd
 
-def near_target(end_pos,cmd):
-    reward = 0.0
+def check_distance(end_pos,cmd):
+    distance_sum = 0
+    check = 0
     for target in cmd:
         if np.all(target == UNUSED_TARGET) :
             continue
         distance = np.linalg.norm(end_pos - target)
+        distance_sum += distance
+        check += 1
         # Assign a reward inversely proportional to the distance
         # You can adjust the scaling factor as needed
-        reward += 1.0 / (distance + 1e-6) 
-    return reward * 1e-9
+
+        # reward += 1.0 / (distance + 1e-6)
+        return distance_sum
 
 def check_done(current_timestep,cmd):
     check = 0
@@ -97,11 +103,11 @@ def check_done(current_timestep,cmd):
             check +=1 
             # print("cmd left", 5 - check)
     if check == 5 :
-        return True , 2
+        return True , 10,check
     if current_timestep == 1000  : 
-        return True , -2
+        return True , -10,check
     else :
-        return False ,0 
+        return False ,0 ,check
     
 def velo_check(currrent_qqd,currrent_qqdd):
 
@@ -122,24 +128,24 @@ def compute_reward(robot,cmd,current_timestep,dt): # and terminate
     
     currrent_q, currrent_qqd, currrent_qqdd, end_pos,valid = feedback(robot, dt)
 
-    done , finish_check = check_done(current_timestep,cmd)
+    done , finish_check ,num_sc = check_done(current_timestep,cmd)
 
     reward += finish_check
 
     if done :
-        return reward ,done,cmd
+        return reward ,done,cmd ,0,num_sc
     
     # check target term
     new_reward , new_cmd = target_check_term(end_pos,cmd,current_timestep)
     reward += new_reward
 
     # Near target term
-    reward += near_target(end_pos,cmd)
-    
+    # reward += near_target(end_pos,cmd)
+    distance = check_distance(end_pos,cmd)
     # velo check 
     reward -= velo_check(currrent_qqd,currrent_qqdd)
 
-    return reward ,done,new_cmd
+    return reward ,done,new_cmd ,distance,num_sc
 
 def compute_next_q(q, qd, qd_prev, dt, max_acc):
     # Calculate the desired change in velocity
@@ -163,7 +169,7 @@ def generate_cmd():
     # Define limits for x, y, z (adjust as needed for your workspace)
     x_range = (-0.5, 0.5)
     y_range = (-0.5, 0.5)
-    z_range = (0.0, 0.5)
+    z_range = (0.2, 0.5)
 
     # Generate 5 target points with random x, y, z values
     targets = np.random.uniform(
@@ -298,9 +304,9 @@ class PPOAgent:
         action_std = torch.ones_like(action_mean) * 0.1  # Adjust as needed
         dist = torch.distributions.Normal(action_mean, action_std)
         action = dist.sample()
-        action = torch.clamp(action, min=-1.5, max=1.5)  # Clamp to (-2, 2)
+        action = torch.clamp(action, min=-2.0, max=2.0)  # Clamp to (-1.5, 1.5)
         log_prob = dist.log_prob(action).sum(dim=-1)
-        return action.detach().numpy(), log_prob.detach()
+        return action.detach().cpu().numpy(), log_prob.detach().cpu()
 
     def compute_gae(self, rewards, dones, values, next_value):
         advantages = []
